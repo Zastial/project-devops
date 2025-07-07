@@ -1,0 +1,26 @@
+services:
+  mariadb:
+    image: mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${MARIADB_DATABASE}
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+    ports:
+      - "${DB_PORT}:3306"
+
+
+  app:
+    build: .
+    ports:
+      - "${EXPRESS_PORT}:3000"
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: ${MARIADB_DATABASE}
+      DB_USER: ${MARIADB_USER}
+      DB_PASS: ${MARIADB_PASSWORD}
+      EXPRESS_PORT: ${EXPRESS_PORT}
+    depends_on:
+      mariadb:
+        condition: service_healthy
