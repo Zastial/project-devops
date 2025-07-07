@@ -1,74 +1,29 @@
-const express = require('express')
-const path = require('path')
-const db = require('../db/database')
-const { validateForm } = require('../validation')
+const express = require('express');
+const router = express.Router();
+const Ticket = require('../models/ticket');
+const Type = require('../models/type');
 
-const router = express.Router()
+router.get('/', async (req, res) => {
+  const types = await Type.findAll();
+  res.render('form', { types });
+});
 
-router.get('/', (req, res) => {
-  // eslint-disable-next-line no-undef
-  res.sendFile(path.join(__dirname, '../../public/index.html'))
-})
+router.post('/', async (req, res) => {
+  const { ticket_type, email, message } = req.body;
 
-async function insertDB(conn, name, email) {
-  try {
-    // Check if user already exists with this email
-    const [existing] = await conn.query(
-      'SELECT * FROM submissions WHERE email = ?',
-      [email]
-    )
-    if (existing) {
-      return { exists: true, user: existing }
+  let typeId;
+  await Type.findOne({
+    where: { name: ticket_type },
+  }).then((type) => {
+    if (type) {
+      typeId = type.id;
+    } else {
+      return res.status(400).send('Type de ticket invalide');
     }
-    await conn.query(
-      'INSERT INTO submissions (name, email) VALUES (?, ?)',
-      [name, email]
-    )
-    return { exists: false }
-  } catch (err) {
-    console.error('Erreur lors de l\'insertion dans la base de données:', err)
-    throw err
-  }
-}
+  });
 
-router.post('/submit', async (req, res) => {
-  const { name, email } = req.body
-  if (!validateForm({ name, email })) {
-    return res.status(400).send('Champs invalides')
-  }
-  let conn
-  try {
-    conn = await db.getConnection()
-    await insertDB(conn, name, email)
-    res.redirect('/submissions')
-  } catch (err) {
-    console.error('Erreur lors de l\'enregistrement:', err)
-    res.status(500).send('Erreur lors de l\'enregistrement')
-  } finally {
-    if (conn) conn.release()
-  }
-})
+  await Ticket.create({ TypeId: typeId, email, message });
+  res.send('Ticket soumis !');
+});
 
-router.get('/submissions', async (req, res) => {
-  let conn
-  try {
-    conn = await db.getConnection()
-    const rows = await conn.query('SELECT * FROM submissions')
-    let html = '<h1>Soumissions</h1><ul>'
-    rows.forEach(row => {
-      html += `<li>${row.name} (${row.email})</li>`
-    })
-    html += '</ul><a href="/">Retour au formulaire</a>'
-    res.send(html)
-  } catch (err) {
-    console.error('Erreur lors de la récupération:', err)
-    res.status(500).send('Erreur lors de la récupération')
-  } finally {
-    if (conn) conn.release()
-  }
-})
-
-module.exports = {
-  router,
-  insertDB
-}
+module.exports = router;

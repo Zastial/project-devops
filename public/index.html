@@ -5,9 +5,17 @@
   <title>Formulaire</title>
 </head>
 <body>
-  <form action="/submit" method="POST">
-    <label>Nom: <input type="text" name="name" required></label><br>
+  <form action="/" method="POST">
+    <label>Type de ticket:
+      <select name="ticket_type" required>
+        <option value="">Sélectionnez un type</option>
+        <option value="bug">Bug</option>
+        <option value="question">Question</option>
+        <option value="sugestion">Suggestion</option>
+      </select>
+    </label><br>
     <label>Email: <input type="email" name="email" required></label><br>
+    <label>Demande: <input type="text" name="message" required></label><br>
     <button type="submit">Envoyer</button>
   </form>
 </body>

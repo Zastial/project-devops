@@ -11,8 +11,9 @@ app.use(bodyParser.urlencoded({ extended: false }))
 // eslint-disable-next-line no-undef
 app.use(express.static(path.join(__dirname, '../public')))
 
-const formRoutes = require('./routes/form').router
-app.use('/', formRoutes)
+app.use('/', require('./routes/form'));
+app.use('/tickets', require('./routes/tickets'));
+
 
 if (require.main === module) {
   app.listen(port, () => {
