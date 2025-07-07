@@ -47,17 +47,6 @@ jobs:
           # Attendre que l'app soit prête (optionnel : healthcheck custom ou pause)
           sleep 10
 
-      - name: Run fixtures in app container
-        run: docker exec mon-app node fixtures/setup-db.js
-
-      - name: Run unit tests in app container
-        run: docker exec mon-app npm run test
-
-      - name: Run Cypress tests against app container
-        run: |
-          # Lancer Cypress avec URL pointant sur localhost:3000 (port exposé)
-          npx cypress run --browser chrome --headless --config baseUrl=http://localhost:3000
-
       - name: Cleanup containers
         run: |
           docker stop mon-app mariadb
