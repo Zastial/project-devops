@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express')
 const bodyParser = require('body-parser')
 const path = require('path')
-
+const setup = require('../fixtures/setup-db');
 
 const app = express()
 const port = 3000
@@ -16,9 +16,14 @@ app.use('/tickets', require('./routes/tickets'));
 
 
 if (require.main === module) {
-  app.listen(port, () => {
-    console.log(`Example app listening on port ${port}`)
-  })
+  setup().then(() => {
+    app.listen(port, () => {
+      console.log(`Example app listening on port ${port}`)
+    })
+  }).catch((err) => {
+    console.error('Failed to set up the database:', err);
+    process.exit(1);
+  });
 }
 
 module.exports = app

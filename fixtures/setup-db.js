@@ -18,9 +18,7 @@ async function setup() {
     console.log('Modèle Ticket synchronisé avec la base de données.');
   } catch (err) {
     console.error('Erreur lors de la préparation de la base :', err);
-  } finally {
-    await sequelize.close();
-  }   
+  }  
 }
 
-setup();
+module.exports = setup;
