@@ -1,27 +1,32 @@
-jest.mock('mariadb', () => ({
-  createPool: jest.fn(() => ({
-    getConnection: jest.fn().mockResolvedValue({
-      query: jest.fn().mockResolvedValue({}),
-      release: jest.fn(),
-    }),
-    query: jest.fn(),
-    end: jest.fn(),
-  })),
-}))
+const Ticket = require('../../src/models/ticket');
+const Type = require('../../src/models/type');
+const db = require('../../src/database');
 
-const { insertDB } = require('../../src/routes/form')
+beforeAll(async () => {
+  // Synchroniser la base en mémoire (test)
+  await db.sync({ force: true });
+  // Créer un type pour tester la clé étrangère
+  await Type.create({ id: 1, name: 'BUG' });
+});
 
-test('insertDB', async () => {
-  const mockQuery = jest.fn()
-    .mockResolvedValueOnce([]) // SELECT
-    .mockResolvedValueOnce({}) // INSERT
+afterAll(async () => {
+  await db.close();
+});
 
-  const mockConn = { query: mockQuery }
+test('crée un ticket en base', async () => {
+  const ticketData = {
+    TypeId: 1,
+    email: 'test@mail.com',
+    message: 'Un message de test',
+  };
 
-  await insertDB(mockConn, 'Alice', 'alice@mail.com')
+  const ticket = await Ticket.create(ticketData);
 
-  expect(mockQuery).toHaveBeenCalledWith(
-    'INSERT INTO submissions (name, email) VALUES (?, ?)',
-    ['Alice', 'alice@mail.com']
-  )
-})
+  expect(ticket).toBeDefined();
+  expect(ticket.email).toBe('test@mail.com');
+  expect(ticket.message).toBe('Un message de test');
+
+  // Vérifier que le ticket est bien dans la base
+  const fetched = await Ticket.findByPk(ticket.id);
+  expect(fetched.email).toBe(ticketData.email);
+});

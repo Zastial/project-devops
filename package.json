@@ -16,7 +16,10 @@
     "supertest": "^7.1.1"
   },
   "scripts": {
-    "test": "jest",
+    "start": "node src/app.js",
+    "test": "jest && start-server-and-test start http://localhost:3000 test:e2e",
+    "test:unit": "jest",
+    "test:e2e": "cypress run",
     "lint": "eslint ."
   },
   "jest": {

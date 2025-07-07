@@ -1,32 +1,32 @@
 describe('Formulaire submissions', () => {
   beforeEach(() => {
-    cy.visit('http://localhost:3000/')
-  })
+    cy.visit('http://localhost:3000/');
+  });
 
-  it('Affiche le formulaire', () => {
-    cy.get('form').should('exist')
-    cy.get('input[name="name"]').should('exist')
-    cy.get('input[name="email"]').should('exist')
-  })
+  it('Affiche le formulaire avec les bons champs', () => {
+    cy.get('form').should('exist');
+    cy.get('select[name="ticket_type"]').should('exist');
+    cy.get('input[name="email"]').should('exist');
+    cy.get('textarea[name="message"]').should('exist');
+  });
 
-  it('Affiche une erreur si champs vides', () => {
-    cy.get('form').submit()
-    cy.contains(/champs invalides/i)
-  })
+  it('Soumission invalide (ticket_type manquant) affiche une erreur serveur', () => {
+    cy.get('input[name="email"]').type('test@mail.com');
+    cy.get('textarea[name="message"]').type('Un message');
+    cy.get('form').submit();
 
-  it('Affiche une erreur si email invalide', () => {
-    cy.get('input[name="name"]').type('Nathan')
-    cy.get('input[name="email"]').type('notanemail')
-    cy.get('form').submit()
-    cy.contains(/champs invalides/i)
-  })
+    // Ton serveur renvoie 400 et "Type de ticket invalide" si ticket_type est invalide ou absent
+    cy.contains('Type de ticket invalide').should('exist');
+  });
 
-  it('Redirige vers /submissions après une soumission valide', () => {
-    cy.get('input[name="name"]').type('Nathan')
-    cy.get('input[name="email"]').type('Nathan@mail.com')
-    cy.get('button[type="submit"],input[type="submit"]').click()
-    cy.url({ timeout: 10000 }).should('include', '/submissions')
-    cy.contains('Soumissions')
-    cy.contains('Nathan')
-  })
-})
+  it('Soumission valide affiche confirmation', () => {
+    // Choisir un ticket_type existant dans ta BDD, par exemple 'BUG'
+    cy.get('select[name="ticket_type"]').select('BUG');
+    cy.get('input[name="email"]').type('test@example.com');
+    cy.get('textarea[name="message"]').type('Ceci est un message de test.');
+    cy.get('form').submit();
+
+    // Le serveur répond par "Ticket soumis !" (texte dans la page)
+    cy.contains('Ticket soumis !').should('exist');
+  });
+});
