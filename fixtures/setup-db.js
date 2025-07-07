@@ -1,41 +1,26 @@
-const mariadb = require('mariadb');
-
-const pool = mariadb.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: 'motdepassefort',
-  database: 'devops_tp',
-  connectionLimit: 5
-});
+require('dotenv').config();
+const sequelize = require('../src/database');
+const Type = require('../src/models/type');
+const Ticket = require('../src/models/ticket');
 
 async function setup() {
-  let conn;
   try {
-    conn = await pool.getConnection();
-    await conn.query(`CREATE TABLE IF NOT EXISTS submissions (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      name VARCHAR(255) NOT NULL ,
-      email VARCHAR(255) NOT NULL UNIQUE
-    )`);
-    const users = [
-      ['Alice', 'alice@mail.com'],
-      ['Bob', 'bob@mail.com'],
-      ['Charlie', 'charlie@mail.com']
-    ];
+    await sequelize.sync({ force: true });
+    await Type.bulkCreate([
+      { name: 'BUG' },
+      { name: 'QUESTION' },
+      { name: 'SUGGESTION' },
+    ]);
+    console.log('Types créés dans la base MariaDB.');
 
-    for (const [name, email] of users) {
-      await conn.query(
-        'INSERT INTO submissions (name, email) VALUES (?, ?) ON DUPLICATE KEY UPDATE name=VALUES(name), email=VALUES(email)',
-        [name, email]
-      );
-    }
-    console.log('Table créée et utilisateurs insérés.');
+    Ticket.belongsTo(Type, { foreignKey: 'TypeId' });
+    await Ticket.sync({ force: true });
+    console.log('Modèle Ticket synchronisé avec la base de données.');
   } catch (err) {
     console.error('Erreur lors de la préparation de la base :', err);
   } finally {
-    if (conn) conn.release();
-    await pool.end();
-  }
+    await sequelize.close();
+  }   
 }
 
 setup();
