@@ -3,51 +3,47 @@ name: CD
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
-  build-and-deploy:
+  build:
+    name: Build Docker image
     runs-on: ubuntu-latest
-
-    env:
-      DB_HOST: mariadb
-      DB_USER: root
-      DB_PASSWORD: ${{ secrets.MARIADB_PASSWORD_CI }}
-      DB_NAME: devops_tp
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Log in to GHCR (GitHub Container Registry)
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
       - name: Build Docker image
-        run: docker build -t mon-app .
-
-      - name: Start MariaDB container
         run: |
-          docker run -d --name mariadb -e MARIADB_ROOT_PASSWORD=${{ secrets.MARIADB_PASSWORD_CI }} -e MARIADB_DATABASE=devops_tp -p 3306:3306 mariadb:11
-          # Attendre que MariaDB soit prêt (healthcheck ou boucle)
-          for i in {1..30}; do
-            if docker exec mariadb mariadb-admin ping --silent; then
-              echo "MariaDB container is up!"
-              break
-            fi
-            echo "Waiting for MariaDB container..."
-            sleep 2
-          done
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/mon-app
+          docker build -t $IMAGE_ID:latest .
 
-      - name: Start app container (avec lien au container mariadb)
+      - name: Push image to GHCR
         run: |
-          docker run -d --name mon-app --link mariadb:mariadb \
-            -e DB_HOST=mariadb \
-            -e DB_USER=root \
-            -e DB_PASSWORD=${{ secrets.MARIADB_PASSWORD_CI }} \
-            -e DB_NAME=devops_tp \
-            -p 3000:3000 mon-app
-          # Attendre que l'app soit prête (optionnel : healthcheck custom ou pause)
-          sleep 10
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/mon-app
+          docker push $IMAGE_ID:latest
 
-      - name: Cleanup containers
+  deploy:
+    name: Deploy on remote server
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup SSH access
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy via SSH
         run: |
-          docker stop mon-app mariadb
-          docker rm mon-app mariadb
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            echo "Pulling latest Docker image..."
+            docker login ghcr.io -u ${{ github.actor }} --password ${{ secrets.GHCR_TOKEN }}
+            docker stop mon-app || true
+            docker rm mon-app || true
+            docker pull ghcr.io/${{ github.repository_owner }}/mon-app:latest
+            docker run -d --name mon-app -p 3000:3000 ghcr.io/${{ github.repository_owner }}/mon-app:latest
+          EOF
