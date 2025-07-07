@@ -59,11 +59,17 @@ jobs:
       - name: Setup database with fixtures
         run: node fixtures/setup-db.js
 
-      - name: Run unit & e2e tests
+      - name: Run unit tests
         run: npm run test
 
+      # Démarrer le serveur pour E2E
       - name: Start server for e2e tests
         run: node src/app.js &
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASSWORD: ${{ secrets.MARIADB_PASSWORD_CI }}
+          DB_NAME: devops_tp
 
       - name: Run Cypress tests
         run: npx cypress run --browser chrome --headless

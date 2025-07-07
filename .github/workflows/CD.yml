@@ -1,4 +1,4 @@
-name: CI
+name: CD
 
 on:
   push:
@@ -7,25 +7,11 @@ on:
     branches: [main]
 
 jobs:
-  build-and-test:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
-    services:
-      mariadb:
-        image: mariadb:11
-        env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MARIADB_PASSWORD_CI }}
-          MYSQL_DATABASE: devops_tp
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mariadb-admin ping --silent"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
     env:
-      DB_HOST: 127.0.0.1
+      DB_HOST: mariadb
       DB_USER: root
       DB_PASSWORD: ${{ secrets.MARIADB_PASSWORD_CI }}
       DB_NAME: devops_tp
@@ -34,25 +20,45 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+      - name: Build Docker image
+        run: docker build -t mon-app .
 
-      - name: Install dependencies
-        run: npm install
+      - name: Start MariaDB container
+        run: |
+          docker run -d --name mariadb -e MARIADB_ROOT_PASSWORD=${{ secrets.MARIADB_PASSWORD_CI }} -e MARIADB_DATABASE=devops_tp -p 3306:3306 mariadb:11
+          # Attendre que MariaDB soit prêt (healthcheck ou boucle)
+          for i in {1..30}; do
+            if docker exec mariadb mariadb-admin ping --silent; then
+              echo "MariaDB container is up!"
+              break
+            fi
+            echo "Waiting for MariaDB container..."
+            sleep 2
+          done
 
-      - name: Run linter
-        run: npm run lint
+      - name: Start app container (avec lien au container mariadb)
+        run: |
+          docker run -d --name mon-app --link mariadb:mariadb \
+            -e DB_HOST=mariadb \
+            -e DB_USER=root \
+            -e DB_PASSWORD=${{ secrets.MARIADB_PASSWORD_CI }} \
+            -e DB_NAME=devops_tp \
+            -p 3000:3000 mon-app
+          # Attendre que l'app soit prête (optionnel : healthcheck custom ou pause)
+          sleep 10
 
-      - name: Setup database with fixtures
-        run: node fixtures/setup-db.js
+      - name: Run fixtures in app container
+        run: docker exec mon-app node fixtures/setup-db.js
 
-      - name: Run unit & e2e tests
-        run: npm run test
+      - name: Run unit tests in app container
+        run: docker exec mon-app npm run test
 
-      - name: Start server for e2e tests
-        run: node src/app.js &
+      - name: Run Cypress tests against app container
+        run: |
+          # Lancer Cypress avec URL pointant sur localhost:3000 (port exposé)
+          npx cypress run --browser chrome --headless --config baseUrl=http://localhost:3000
 
-      - name: Run Cypress tests
-        run: npx cypress run --browser chrome --headless
+      - name: Cleanup containers
+        run: |
+          docker stop mon-app mariadb
+          docker rm mon-app mariadb
