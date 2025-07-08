@@ -1,17 +1,5 @@
 const Ticket = require('../../src/models/ticket');
 const Type = require('../../src/models/type');
-const db = require('../../src/database');
-
-beforeAll(async () => {
-  // Synchroniser la base en mémoire (test)
-  await db.sync({ force: true });
-  // Créer un type pour tester la clé étrangère
-  await Type.create({ id: 1, name: 'BUG' });
-});
-
-afterAll(async () => {
-  await db.close();
-});
 
 test('crée un ticket en base', async () => {
   const ticketData = {
