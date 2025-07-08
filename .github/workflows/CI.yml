@@ -50,6 +50,9 @@ jobs:
 
       - name: Run unit tests
         run: docker compose exec -T app npm run test:unit
+        env:
+          ADMIN_USER: admin
+          ADMIN_PASSWORD: password
 
       - name: Run e2e tests
         run: docker compose exec -T app npm run test:e2e
