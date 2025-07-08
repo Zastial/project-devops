@@ -26,6 +26,7 @@ npm start
 ## Tests
 ```sh
 npm run test
+npx cypress run
 ```
 
 ## Linter

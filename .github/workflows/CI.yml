@@ -58,6 +58,11 @@ jobs:
 
       - name: Setup database with fixtures
         run: node fixtures/setup-db.js
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASSWORD: ${{ secrets.MARIADB_PASSWORD_CI }}
+          DB_NAME: devops_tp
 
       - name: Run unit tests
         run: npm run test
