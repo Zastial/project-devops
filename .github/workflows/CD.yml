@@ -5,45 +5,29 @@ on:
     branches: [main]
 
 jobs:
-  build:
-    name: Build Docker image
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Log in to GHCR (GitHub Container Registry)
-        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-      - name: Build Docker image
-        run: |
-          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/mon-app
-          docker build -t $IMAGE_ID:latest .
-
-      - name: Push image to GHCR
-        run: |
-          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/mon-app
-          docker push $IMAGE_ID:latest
-
   deploy:
     name: Deploy on remote server
-    needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Setup SSH access
-        uses: webfactory/ssh-agent@v0.8.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan -H 89.168.46.10 >> ~/.ssh/known_hosts
 
-      - name: Deploy via SSH
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            echo "Pulling latest Docker image..."
-            docker login ghcr.io -u ${{ github.actor }} --password ${{ secrets.GHCR_TOKEN }}
-            docker stop mon-app || true
-            docker rm mon-app || true
-            docker pull ghcr.io/${{ github.repository_owner }}/mon-app:latest
-            docker run -d --name mon-app -p 3000:3000 ghcr.io/${{ github.repository_owner }}/mon-app:latest
-          EOF
+    - name: Merge and Deploy on Sandbox VM
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        ssh -i ~/.ssh/id_ed25519 ubuntu@89.168.46.10 << 'EOF'
+          set -e
+          cd ESGI/CI_CD/project-devops/
+
+          git fetch --all
+          git reset --hard origin/main
+
+          echo "Deploying latest code"
+          docker compose up -d
+        EOF
