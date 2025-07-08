@@ -14,13 +14,6 @@ beforeAll(async () => {
     type = await Type.create({ name: testTypeName });
   }
   testTypeId = type.id;
-
-  try {
-    // Nettoyer les tickets de test
-    await Ticket.destroy({ where: { email: 'test@example.com' } });
-  } catch (err) {
-    console.error('Erreur lors du nettoyage des tickets de test :', err);
-  }
 });
 
 afterAll(async () => {
