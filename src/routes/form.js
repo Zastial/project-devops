@@ -13,7 +13,7 @@ router.post('/', async (req, res) => {
 
   let typeId;
   await Type.findOne({
-    where: { name: ticket_type },
+    where: { name: ticket_type.toUpperCase() },
   }).then((type) => {
     if (type) {
       typeId = type.id;
