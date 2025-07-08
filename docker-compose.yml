@@ -6,6 +6,8 @@ services:
       MARIADB_DATABASE: ${MARIADB_DATABASE}
     ports:
       - "${DB_PORT}:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mariadb-admin", "ping", "-h", "localhost"]
       interval: 10s
@@ -27,3 +29,6 @@ services:
     depends_on:
       mariadb:
         condition: service_healthy
+
+volumes:
+  mariadb_data:

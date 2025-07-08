@@ -5,7 +5,7 @@ const Ticket = require('../src/models/ticket');
 
 async function setup() {
   try {
-    await sequelize.sync({ force: true });
+    await sequelize.sync();
     await Type.bulkCreate([
       { name: 'BUG' },
       { name: 'QUESTION' },
@@ -14,7 +14,7 @@ async function setup() {
     console.log('Types créés dans la base MariaDB.');
 
     Ticket.belongsTo(Type, { foreignKey: 'TypeId' });
-    await Ticket.sync({ force: true });
+    await Ticket.sync();
     console.log('Modèle Ticket synchronisé avec la base de données.');
   } catch (err) {
     console.error('Erreur lors de la préparation de la base :', err);

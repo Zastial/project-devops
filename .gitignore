@@ -2,3 +2,5 @@ package-lock.json
 node_modules/
 cypress/
 .env
+my-custom.cnf
+docker-compose.override.yml
