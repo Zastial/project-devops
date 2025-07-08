@@ -55,7 +55,7 @@ jobs:
           ADMIN_PASSWORD: password
 
       - name: Run e2e tests
-        run: docker compose exec -T app npm run test:e2e
+        run: npx cypress run
 
       - name: Show logs if failed
         if: failure()

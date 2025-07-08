@@ -2,6 +2,8 @@
 
 Alexandre CAROL / Mathis MICHENAUD
 
+## Check the project : http://devops.project.zastial.com/
+
 ## Lancer MariaDB en local
 ```sh
 docker run -d \
