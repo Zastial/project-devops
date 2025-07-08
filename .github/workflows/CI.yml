@@ -17,11 +17,19 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Copy .env file
-        run: cp .env.example .env
-
       - name: Build and start services
         run: docker compose up -d --build
+        env:
+          EXPRESS_PORT: 3000
+          DB_HOST: localhost
+          DB_PORT: 3306
+          DB_NAME: devops_project
+          DB_USER: root
+          DB_PASSWORD: ${{ secrets.MARIADB_PASSWORD_CI }}
+          ADMIN_USER: admin
+          ADMIN_PASSWORD: password
+          MARIADB_ROOT_PASSWORD: ${{ secrets.MARIADB_PASSWORD_CI }}
+          MARIADB_DATABASE: devops_project
 
       - name: Wait for MariaDB to be healthy
         run: |
