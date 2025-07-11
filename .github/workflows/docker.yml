@@ -3,12 +3,9 @@ name: Push Docker
 
 on:
   push:
-    branches:
-      - main
-      - seed
-    tags:
-      - v*
+    branches: [main]
   pull_request:
+    branches: ["*"]
   
   env:
   IMAGE_NAME: projet-devops-docker-image
