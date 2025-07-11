@@ -57,7 +57,6 @@ jobs:
       - name: Run Cypress e2e tests
         uses: cypress-io/github-action@v6
         with:
-          start: docker compose up -d --build
           wait-on: http://localhost:3000
           wait-on-timeout: 60
           browser: chrome
