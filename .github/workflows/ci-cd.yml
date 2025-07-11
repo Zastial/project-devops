@@ -18,7 +18,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build and start services
-        run: docker compose up -d
+        run: docker compose up -d --build
         env:
           EXPRESS_PORT: 3000
           DB_HOST: localhost
@@ -57,7 +57,7 @@ jobs:
       - name: Run Cypress e2e tests
         uses: cypress-io/github-action@v6
         with:
-          start: docker compose up -d
+          start: docker compose up -d --build
           wait-on: http://localhost:3000
           wait-on-timeout: 60
           browser: chrome
