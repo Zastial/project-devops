@@ -119,7 +119,7 @@ jobs:
             docker pull zastial/project_devops:latest
             docker stop project-devops-app-1 || true
             docker rm project-devops-app-1 || true
-            docker run -d --name project-devops-app-1 -p 3000:3000 zastial/project_devops:latest
+            docker run -d --name project-devops-app-1 -p 3009:3000 zastial/project_devops:latest
           EOF
 
 
