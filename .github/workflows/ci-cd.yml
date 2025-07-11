@@ -18,7 +18,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build and start services
-        run: docker compose up -d --build
+        run: docker compose up -d
         env:
           EXPRESS_PORT: 3000
           DB_HOST: localhost
@@ -57,7 +57,7 @@ jobs:
       - name: Run Cypress e2e tests
         uses: cypress-io/github-action@v6
         with:
-          start: docker compose up -d --build
+          start: docker compose up -d
           wait-on: http://localhost:3000
           wait-on-timeout: 60
           browser: chrome
@@ -74,39 +74,49 @@ jobs:
         if: always()
         run: docker compose down -v
 
-  build-and-push:
+  push-github-image:
     runs-on: ubuntu-latest
     needs: build-and-test
-    if: ${{ always() && needs.build-and-test.result == 'success' }}
+    permissions:
+      packages: write
+      contents: read
 
-  steps:
-    - uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
+      - name: Build image
+        run: docker build . --file Dockerfile --tag projet-devops-docker-image --label "runnumber=${GITHUB_RUN_ID}"
 
-    - name: Log in to Docker Hub
-      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-    - name: Extract metadata (tags, labels) for Docker
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: zastial/project_devops
+      - name: Push image
+        run: |
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/projet-devops-docker-image
 
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: Dockerfile
-        push: true
-        tags: zastial/project_devops:latest
-        platforms: linux/arm64
-        labels: ${{ steps.meta.outputs.labels }}
+          # Convert IMAGE_ID to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+
+          # Extract version from ref
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+
+          # Remove 'v' prefix if tag starts with 'v'
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+
+          # Set version to 'latest' if on main
+          [ "$VERSION" == "main" ] && VERSION=latest
+
+          echo "IMAGE_ID=$IMAGE_ID"
+          echo "VERSION=$VERSION"
+
+          docker tag projet-devops-docker-image $IMAGE_ID:$VERSION
+          docker push $IMAGE_ID:$VERSION
+
 
   deploy-to-vm:
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: push-github-image
 
     steps:
       - name: Setup SSH
@@ -119,11 +129,10 @@ jobs:
       - name: Deploy to VM - Pull and restart container
         run: |
           ssh -i ~/.ssh/id_ed25519 ubuntu@89.168.46.10 << 'EOF'
-            docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-            docker pull zastial/project_devops:latest
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker pull ghcr.io/zastial/projet-devops-docker-image:merge
             docker stop project-devops-app-1 || true
             docker rm project-devops-app-1 || true
-            docker run -d --name project-devops-app-1 -p 3009:3000 zastial/project_devops:latest
+            docker run -d --name project-devops-app-1 -p 3009:3000 ghcr.io/zastial/projet-devops-docker-image:merge
           EOF
-
 
