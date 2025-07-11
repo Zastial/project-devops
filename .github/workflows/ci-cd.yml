@@ -114,12 +114,12 @@ jobs:
 
       - name: Deploy to VM - Pull and restart container
         run: |
-          ssh -i ~/.ssh/id_ed25519 deploy@89.168.46.10 << 'EOF'
+          ssh -i ~/.ssh/id_ed25519 ubuntu@89.168.46.10 << 'EOF'
             docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
             docker pull zastial/project_devops:latest
-            docker stop project_devops || true
-            docker rm project_devops || true
-            docker run -d --name project_devops -p 3000:3000 zastial/project_devops:latest
+            docker stop project-devops-app-1 || true
+            docker rm project-devops-app-1 || true
+            docker run -d --name project-devops-app-1 -p 3000:3000 zastial/project_devops:latest
           EOF
 
 
