@@ -8,30 +8,26 @@ on:
     branches: [main]
 
 jobs:
-  deploy:
-    name: Deploy on remote server
+  build-and-push:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-    - name: Setup SSH
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
-        chmod 600 ~/.ssh/id_ed25519
-        ssh-keyscan -H 89.168.46.10 >> ~/.ssh/known_hosts
+    - uses: actions/checkout@v4
 
-    - name: Merge and Deploy on Sandbox VM
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        ssh -i ~/.ssh/id_ed25519 ubuntu@89.168.46.10 << 'EOF'
-          set -e
-          cd ESGI/CI_CD/project-devops/
+    - name: Log in to Docker Hub
+      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-          git fetch --all
-          git reset --hard origin/main
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: zastial/project_devops
 
-          echo "Deploying latest code"
-          docker compose up -d --build
-        EOF
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
