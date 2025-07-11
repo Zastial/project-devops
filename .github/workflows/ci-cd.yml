@@ -97,7 +97,7 @@ jobs:
           context: .
           file: Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: zastial/project_devops:latest
           labels: ${{ steps.meta.outputs.labels }}
 
   deploy-to-vm:
